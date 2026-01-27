@@ -28,5 +28,20 @@
         "name": "Mohammed",
         "phone": "1234-5678",
         "employeeId": "E006"
+    },
+    {
+        "employeeId": "E007",
+        "name": "Rizan Mohammed",
+        "phone": "66241576"
+    },
+    {
+        "employeeId": "E008",
+        "name": "Raifah Mohammed",
+        "phone": "5555-0903"
+    },
+    {
+        "employeeId": "E009",
+        "name": "Khadija Hussain",
+        "phone": "66985430"
     }
 ]
