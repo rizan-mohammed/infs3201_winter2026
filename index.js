@@ -96,7 +96,6 @@ async function addNewEmployee() {
         // and it would do it each time i need to add an employee
         //idk whuch one i prefer yet
         const newId = getNextEmployeeId(employees)
-        
         const newEmployee = {
             employeeId: newId,
             name: name,
@@ -112,7 +111,83 @@ async function addNewEmployee() {
     }
 }
 
-async function assignShift(){}
+//helper functions (validate existence)
+function employeeExists(employeeId, employees) {
+    for (let i = 0; i < employees.length; i++) {
+        if (employees[i].employeeId === employeeId) {
+            return true
+        }
+    }
+    return false
+}
+
+function shiftExists(shiftId, shifts) {
+    for (let i = 0; i < shifts.length; i++) {
+        if (shifts[i].shiftId === shiftId) {
+            return true
+        }
+    }
+    return false
+}
+
+function assignmentExists(employeeId, shiftId, assignments) {
+    for (let i = 0; i < assignments.length; i++) {
+        if (assignments[i].employeeId === employeeId && assignments[i].shiftId === shiftId) {
+            return true
+        }
+    }
+    return false
+}
+
+async function assignShift() {
+    try {
+        const employeeId = prompt('Enter employee ID: ')
+        const shiftId = prompt('Enter shift ID: ')
+        
+        const employees = await loadEmployees()
+        const shifts = await loadShifts()
+        const assignments = await loadAssignments()
+        
+        //existence checks (helpers)
+        if (!employeeExists(employeeId, employees)) {
+            console.log('Employee does not exist')
+            return
+        }
+        if (!shiftExists(shiftId, shifts)) {
+            console.log('Shift does not exist')
+            return
+        }
+        if (assignmentExists(employeeId, shiftId, assignments)) {
+            console.log('Employee already assigned to shift')
+            return
+        }
+        
+        // new assignment
+        const newAssignment = {
+            employeeId: employeeId,
+            shiftId: shiftId
+        }
+        
+        assignments.push(newAssignment)
+        await saveAssignments(assignments)
+        
+        console.log('Shift Recorded')
+    } catch (error) {
+        console.log('Error assigning shift:', error.message)
+    }
+}
+
+
+
+//helper function (sort of likr oop getter method for shift using ID)
+function getShiftById(shiftId, shifts) {
+    for (let i = 0; i < shifts.length; i++) {
+        if (shifts[i].shiftId === shiftId) {
+            return shifts[i]
+        }
+    }
+    return null
+}
 async function viewEmployeeSchedule(){}
 
 

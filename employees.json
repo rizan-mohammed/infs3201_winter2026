@@ -43,5 +43,10 @@
         "employeeId": "E009",
         "name": "Khadija Hussain",
         "phone": "6698-5430"
+    },
+    {
+        "employeeId": "E010",
+        "name": "Rinad Arshad",
+        "phone": "5567-6454"
     }
 ]
