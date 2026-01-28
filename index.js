@@ -1,49 +1,64 @@
-//DELETE BEFORE SUBMISSION
-//notes: whats left??? TO-DO: 
-//employee schedules
-//assign shifts
-//theres some helper functions left too
-//get shift (by id)
-//get next emp id
-//chech if shift / emp or assignment exist 
-
 const fs = require('fs').promises
 const prompt = require('prompt-sync')()
 
 //all loading functons
+/**
+ * Loads employee data from the employees.json file
+ * @returns {Promise<Array>} Array of employee objects
+ */
 async function loadEmployees() {
     const data = await fs.readFile('employees.json', 'utf8')
     return JSON.parse(data)
 }
+
+/**
+ * Loads shift data from the shifts.json file
+ * @returns {Promise<Array>} Array of shift objects
+ */
 async function loadShifts() {
     const data = await fs.readFile('shifts.json', 'utf8')
     return JSON.parse(data)
 }
+
+/**
+ * Loads assignment data from the assignments.json file
+ * @returns {Promise<Array>} Array of assignment objects
+ */
 async function loadAssignments() {
     const data = await fs.readFile('assignments.json', 'utf8')
     return JSON.parse(data)
 }
 
 //all save functions
+/**
+ * Saves employee data to the employees.json file
+ * @param {Array} employees - Array of employee objects to save
+ * @returns {Promise<void>}
+ */
 async function saveEmployees(employees) {
     await fs.writeFile('employees.json', JSON.stringify(employees, null, 4))
 }
+
+/**
+ * Saves assignment data to the assignments.json file
+ * @param {Array} assignments - Array of assignment objects to save
+ * @returns {Promise<void>}
+ */
 async function saveAssignments(assignments) {
     await fs.writeFile('assignments.json', JSON.stringify(assignments, null, 4))
 }
 
 
 //persistence layer functions
-
+/**
+ * Displays all employees in a formatted table
+ * @returns {Promise<void>}
+ */
 async function showAllEmployees() {
     try {
         const employees = await loadEmployees()
         
         //for column width
-
-        //delete before final submission
-        //note: y is this even necessary?
-        //pretty output ig
         let maxNameLength = 20
         for (let i = 0; i < employees.length; i++) {
             if (employees[i].name.length > maxNameLength) {
@@ -65,10 +80,13 @@ async function showAllEmployees() {
 }
 
 
+/**
+ * Generates the next available employee ID in sequence
+ * @param {Array} employees - Array of existing employee objects
+ * @returns {string} The next employee ID in format E###
+ */
 function getNextEmployeeId(employees) {
-    //adding new employee  =  new ID generation
-    //delete before submission
-    //note: i like the seperate function better
+    //adding new employee  =  needs a new ID generation
     let maxId = 0
     
     for (let i = 0; i < employees.length; i++) {
@@ -85,16 +103,16 @@ function getNextEmployeeId(employees) {
 }
 
 
+/**
+ * Prompts user for employee information and adds a new employee to the system
+ * @returns {Promise<void>}
+ */
 async function addNewEmployee() {
     try {
         const name = prompt('Enter employee name: ')
         const phone = prompt('Enter phone number: ')
         
         const employees = await loadEmployees()
-        //delete before final submission
-        // note:/ i could either make a new function to do the IDs or put that logic here 
-        // and it would do it each time i need to add an employee
-        //idk whuch one i prefer yet
         const newId = getNextEmployeeId(employees)
         const newEmployee = {
             employeeId: newId,
@@ -112,6 +130,12 @@ async function addNewEmployee() {
 }
 
 //helper functions (validate existence)
+/**
+ * Checks if an employee exists in the employee list
+ * @param {string} employeeId - The employee ID to search for
+ * @param {Array} employees - Array of employee objects
+ * @returns {boolean} True if employee exists, false otherwise
+ */
 function employeeExists(employeeId, employees) {
     for (let i = 0; i < employees.length; i++) {
         if (employees[i].employeeId === employeeId) {
@@ -121,6 +145,12 @@ function employeeExists(employeeId, employees) {
     return false
 }
 
+/**
+ * Checks if a shift exists in the shift list
+ * @param {string} shiftId - The shift ID to search for
+ * @param {Array} shifts - Array of shift objects
+ * @returns {boolean} True if shift exists, false otherwise
+ */
 function shiftExists(shiftId, shifts) {
     for (let i = 0; i < shifts.length; i++) {
         if (shifts[i].shiftId === shiftId) {
@@ -130,6 +160,13 @@ function shiftExists(shiftId, shifts) {
     return false
 }
 
+/**
+ * Checks if an assignment already exists for a given employee and shift
+ * @param {string} employeeId - The employee ID
+ * @param {string} shiftId - The shift ID
+ * @param {Array} assignments - Array of assignment objects
+ * @returns {boolean} True if assignment exists, false otherwise
+ */
 function assignmentExists(employeeId, shiftId, assignments) {
     for (let i = 0; i < assignments.length; i++) {
         if (assignments[i].employeeId === employeeId && assignments[i].shiftId === shiftId) {
@@ -139,6 +176,10 @@ function assignmentExists(employeeId, shiftId, assignments) {
     return false
 }
 
+/**
+ * Assigns an employee to a shift after validating referential integrity
+ * @returns {Promise<void>}
+ */
 async function assignShift() {
     try {
         const employeeId = prompt('Enter employee ID: ')
@@ -180,6 +221,12 @@ async function assignShift() {
 
 
 //helper function (sort of likr oop getter method for shift using ID)
+/**
+ * Retrieves a shift object by its ID
+ * @param {string} shiftId - The shift ID to search for
+ * @param {Array} shifts - Array of shift objects
+ * @returns {Object|null} The shift object if found, null otherwise
+ */
 function getShiftById(shiftId, shifts) {
     for (let i = 0; i < shifts.length; i++) {
         if (shifts[i].shiftId === shiftId) {
@@ -188,6 +235,11 @@ function getShiftById(shiftId, shifts) {
     }
     return null
 }
+
+/**
+ * Displays an employee's schedule in CSV format sorted by date and time
+ * @returns {Promise<void>}
+ */
 async function viewEmployeeSchedule() {
     try {
         const employeeId = prompt('Enter employee ID: ')
@@ -197,7 +249,7 @@ async function viewEmployeeSchedule() {
         const assignments = await loadAssignments()
         
 
-        console.log('date, startTime, endTime')
+        console.log('date,startTime,endTime')
         
         if (!employeeExists(employeeId, employees)) {
             return
@@ -233,7 +285,7 @@ async function viewEmployeeSchedule() {
         
         for (let i = 0; i < scheduleItems.length; i++) {
             const shift = scheduleItems[i]
-            console.log(shift.date + ', ' + shift.startTime + ', ' + shift.endTime)
+            console.log(shift.date + ',' + shift.startTime + ',' + shift.endTime)
         }
     } catch (error) {
         console.log('Error viewing schedule:', error.message)
@@ -241,6 +293,10 @@ async function viewEmployeeSchedule() {
 }
 
 
+/**
+ * Displays the main menu options to the user
+ * @returns {void}
+ */
 function showMenu() {
     console.log('\n1. Show all employees')
     console.log('2. Add new employee')
@@ -250,6 +306,10 @@ function showMenu() {
 }
 
 
+/**
+ * Main function that runs the menu-driven application loop
+ * @returns {Promise<void>}
+ */
 async function main() {
     let loop = true
     
@@ -273,9 +333,3 @@ async function main() {
 }
 
 main()
-
-
-
-
-
-
