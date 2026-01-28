@@ -188,7 +188,57 @@ function getShiftById(shiftId, shifts) {
     }
     return null
 }
-async function viewEmployeeSchedule(){}
+async function viewEmployeeSchedule() {
+    try {
+        const employeeId = prompt('Enter employee ID: ')
+        
+        const employees = await loadEmployees()
+        const shifts = await loadShifts()
+        const assignments = await loadAssignments()
+        
+
+        console.log('date, startTime, endTime')
+        
+        if (!employeeExists(employeeId, employees)) {
+            return
+        }
+        
+        const employeeAssignments = []
+        for (let i = 0; i < assignments.length; i++) {
+            if (assignments[i].employeeId === employeeId) {
+                employeeAssignments.push(assignments[i])
+            }
+        }
+        
+        const scheduleItems = []
+        for (let i = 0; i < employeeAssignments.length; i++) {
+            const shift = getShiftById(employeeAssignments[i].shiftId, shifts)
+            if (shift) {
+                scheduleItems.push(shift)
+            }
+        }
+        
+        //sort 
+        for (let i = 0; i < scheduleItems.length - 1; i++) {
+            for (let j = 0; j < scheduleItems.length - i - 1; j++) {
+                const current = scheduleItems[j].date + scheduleItems[j].startTime
+                const next = scheduleItems[j + 1].date + scheduleItems[j + 1].startTime
+                if (current > next) {
+                    const temp = scheduleItems[j]
+                    scheduleItems[j] = scheduleItems[j + 1]
+                    scheduleItems[j + 1] = temp
+                }
+            }
+        }
+        
+        for (let i = 0; i < scheduleItems.length; i++) {
+            const shift = scheduleItems[i]
+            console.log(shift.date + ', ' + shift.startTime + ', ' + shift.endTime)
+        }
+    } catch (error) {
+        console.log('Error viewing schedule:', error.message)
+    }
+}
 
 
 function showMenu() {
@@ -223,6 +273,7 @@ async function main() {
 }
 
 main()
+
 
 
 
