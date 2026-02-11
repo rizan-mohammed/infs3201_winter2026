@@ -53,5 +53,10 @@
         "employeeId": "E011",
         "name": "Wajiha Siddiqui",
         "phone": "0982-2346"
+    },
+    {
+        "employeeId": "E012",
+        "name": "Lola Tola",
+        "phone": "0982-2346"
     }
 ]

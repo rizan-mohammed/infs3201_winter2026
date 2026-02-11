@@ -28,6 +28,15 @@ async function loadAssignments() {
 }
 
 /**
+ * Loads configuration data from the config.json file
+ * @returns {Promise<Object>} Configuration object containing maxDailyHours
+ */
+async function loadConfig() {
+    const data = await fs.readFile('config.json', 'utf8')
+    return JSON.parse(data)
+}
+
+/**
  * Saves employee data to the employees.json file
  * @param {Array} employees - Array of employee objects to save
  * @returns {Promise<void>}
@@ -100,6 +109,31 @@ async function findShiftsByEmployee(employeeId) {
 }
 
 /**
+ * Finds all assignments for a specific employee on a specific date
+ * @param {string} employeeId - The employee ID
+ * @param {string} date - The date in YYYY-MM-DD format
+ * @returns {Promise<Array>} Array of shift objects on that date
+ */
+async function findShiftsByEmployeeAndDate(employeeId, date) {
+    const assignments = await loadAssignments()
+    const shifts = await loadShifts()
+    const result = []
+    
+    for (let i = 0; i < assignments.length; i++) {
+        if (assignments[i].employeeId === employeeId) {
+            for (let j = 0; j < shifts.length; j++) {
+                if (shifts[j].shiftId === assignments[i].shiftId && shifts[j].date === date) {
+                    result.push(shifts[j])
+                    break
+                }
+            }
+        }
+    }
+    
+    return result
+}
+
+/**
  * Checks if a specific assignment already exists
  * @param {string} employeeId - The employee ID
  * @param {string} shiftId - The shift ID
@@ -119,10 +153,12 @@ module.exports = {
     loadEmployees,
     loadShifts,
     loadAssignments,
+    loadConfig,
     saveEmployees,
     saveAssignments,
     findEmployee,
     findShift,
     findShiftsByEmployee,
+    findShiftsByEmployeeAndDate,
     assignmentExists
 }

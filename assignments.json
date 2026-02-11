@@ -26,5 +26,9 @@
     {
         "employeeId": "E009",
         "shiftId": "S001"
+    },
+    {
+        "employeeId": "E011",
+        "shiftId": "S002"
     }
 ]
