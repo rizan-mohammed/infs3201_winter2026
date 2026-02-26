@@ -8,9 +8,9 @@ const business = require('./business')
 function showMenu() {
     console.log('\n1. Show all employees')
     console.log('2. Add new employee')
-    console.log('3. Assign employee to shift')
-    console.log('4. View employee schedule')
-    console.log('5. Exit')
+    // console.log('3. Assign employee to shift')
+    console.log('3. View employee schedule')
+    console.log('4. Exit')
 }
 
 /**
@@ -62,21 +62,23 @@ async function addNewEmployee() {
     }
 }
 
-/**
- * Prompts user for employee and shift IDs and assigns the employee to the shift
- * @returns {Promise<void>}
- */
-async function assignShift() {
-    try {
-        const employeeId = prompt('Enter employee ID: ')
-        const shiftId = prompt('Enter shift ID: ')
+// "We will not be implementing this feature in Assignment 3, and the database design right now doesn’t support it well 
+// (it might be brought back in during Assignment 4). "
+// /**
+//  * Prompts user for employee and shift IDs and assigns the employee to the shift
+//  * @returns {Promise<void>}
+//  */
+// async function assignShift() {
+//     try {
+//         const employeeId = prompt('Enter employee ID: ')
+//         const shiftId = prompt('Enter shift ID: ')
         
-        const result = await business.assignEmployeeToShift(employeeId, shiftId)
-        console.log(result.message)
-    } catch (error) {
-        console.log('Error assigning shift:', error.message)
-    }
-}
+//         const result = await business.assignEmployeeToShift(employeeId, shiftId)
+//         console.log(result.message)
+//     } catch (error) {
+//         console.log('Error assigning shift:', error.message)
+//     }
+// }
 
 /**
  * Prompts user for employee ID and displays their schedule in CSV format
@@ -117,11 +119,13 @@ async function main() {
             await showAllEmployees()
         } else if (choice === '2') {
             await addNewEmployee()
-        } else if (choice === '3') {
-            await assignShift()
-        } else if (choice === '4') {
+        } 
+        // else if (choice === '3') {
+        //     await assignShift()
+        // } 
+        else if (choice === '3') {
             await viewEmployeeSchedule()
-        } else if (choice === '5') {
+        } else if (choice === '4') {
             loop = false
         } else {
             console.log('Invalid choice, please try again')
