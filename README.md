@@ -1,39 +1,44 @@
-# Employee Shift Management System
+# Employee Scheduling System - Assignment 2
 
-INFS3201 - Web Technologies II
+## Description
+Employee scheduling system with 3-tier architecture that manages employee shifts and enforces daily hour limitations.
 
-## Setup Instructions
-
-1. Install Node.js if you haven't already
-2. Navigate to the project directory
-3. Install dependencies:
-```
-   npm install
+## Installation
+```bash
+npm install
 ```
 
 ## Running the Application
-```
+```bash
 node index.js
 ```
 
 ## Features
+- View all employees
+- Add new employees
+- Assign employees to shifts with automatic validation
+- View employee schedules
+- Enforces maximum daily hours limit (configurable in config.json)
 
-1. **Show all employees** - Displays a formatted table of all employees
-2. **Add new employee** - Add a new employee with auto-generated ID
-3. **Assign employee to shift** - Assign an existing employee to a shift with validation
-4. **View employee schedule** - View all shifts for a specific employee in CSV format
-5. **Exit** - Exit the application
+## File Structure
+- **index.js** - Presentation layer (user interface)
+- **business.js** - Business logic layer
+- **persistence.js** - Data persistence layer
+- **config.json** - System configuration (max daily hours)
+- **employees.json** - Employee data
+- **shifts.json** - Shift data
+- **assignments.json** - Assignment data
 
-## Data Files
+## Configuration
+Maximum daily hours can be adjusted in `config.json`:
+```json
+{
+    "maxDailyHours": 9
+}
+```
 
-- `employees.json` - Employee information
-- `shifts.json` - Shift timing information
-- `assignments.json` - Employee-to-shift assignments
-
-## Code Standards
-
-- 4-space indentation
-- Camel case variables
-- Function declarations (not arrow functions)
-- Traditional for/while loops (no array methods like map, filter, forEach)
-- Async/await with fs/promises for file operations
+## Architecture
+This application uses a 3-tier closed architecture:
+- Presentation layer handles user input/output
+- Business layer handles validation and business rules
+- Persistence layer handles all file operations
