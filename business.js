@@ -1,9 +1,9 @@
 const persistence = require('./persistance')
 
 /**
- * Computes the duraction of a shift in hours
+ * Computes the duration of a shift in hours
  * Generated using: Claude Sonnet 4.5
- * Prompt: "Write a function that takes two time strings in HH:MM format (like 11:00 and 13:30) 
+ * Prompt: "Write a function that takes two time strings in HH:MM format (like 11:00 and 13:30)
  * and returns the duration in hours as a decimal number (like 2.5)"
  * @param {string} startTime - Start time in HH:MM format
  * @param {string} endTime - End time in HH:MM format
@@ -12,19 +12,14 @@ const persistence = require('./persistance')
 function computeShiftDuration(startTime, endTime) {
     const startParts = startTime.split(':')
     const endParts = endTime.split(':')
-    
     const startHours = parseInt(startParts[0])
     const startMinutes = parseInt(startParts[1])
     const endHours = parseInt(endParts[0])
     const endMinutes = parseInt(endParts[1])
-    
     const startTotalMinutes = startHours * 60 + startMinutes
     const endTotalMinutes = endHours * 60 + endMinutes
-    
     const durationMinutes = endTotalMinutes - startTotalMinutes
-    const durationHours = durationMinutes / 60
-    
-    return durationHours
+    return durationMinutes / 60
 }
 
 /**
@@ -42,17 +37,13 @@ async function getAllEmployees() {
 async function getNextEmployeeId() {
     const employees = await persistence.loadEmployees()
     let maxId = 0
-    
     for (let i = 0; i < employees.length; i++) {
         const idNum = parseInt(employees[i].employeeId.substring(1))
         if (idNum > maxId) {
             maxId = idNum
         }
     }
-    
-    const nextId = maxId + 1
-    let newId = 'E' + String(nextId).padStart(3, '0')
-    return newId
+    return 'E' + String(maxId + 1).padStart(3, '0')
 }
 
 /**
@@ -63,18 +54,13 @@ async function getNextEmployeeId() {
  */
 async function addEmployee(name, phone) {
     try {
-        const employees = await persistence.loadEmployees()
         const newId = await getNextEmployeeId()
-        
         const newEmployee = {
             employeeId: newId,
             name: name,
             phone: phone
         }
-        
-        employees.push(newEmployee)
-        await persistence.saveEmployees(employees)
-        
+        await persistence.insertEmployee(newEmployee)
         return { success: true, employee: newEmployee }
     } catch (error) {
         return { success: false, error: error.message }
@@ -82,82 +68,40 @@ async function addEmployee(name, phone) {
 }
 
 /**
- * Validates if an employee can be assigned to a shift based on daily hour limits
- * @param {string} employeeId - The employee ID
- * @param {string} shiftId - The shift ID
- * @returns {Promise<Object>} Object containing canAssign boolean and reason if false
+ * Updates an existing employee's details after validating inputs
+ * @param {string} employeeId - The employee ID to update
+ * @param {string} name - The new name (will be trimmed)
+ * @param {string} phone - The new phone number (will be trimmed)
+ * @returns {Promise<Object>} Object containing success status and errors array if validation failed
  */
-async function validateShiftAssignment(employeeId, shiftId) {
-    const employee = await persistence.findEmployee(employeeId)
-    if (!employee) {
-        return { canAssign: false, reason: 'Employee does not exist' }
-    }
-    
-    const shift = await persistence.findShift(shiftId)
-    if (!shift) {
-        return { canAssign: false, reason: 'Shift does not exist' }
-    }
-    
-    const exists = await persistence.assignmentExists(employeeId, shiftId)
-    if (exists) {
-        return { canAssign: false, reason: 'Employee already assigned to shift' }
-    }
-    
-    const config = await persistence.loadConfig()
-    const maxDailyHours = config.maxDailyHours
-    
-    const existingShifts = await persistence.findShiftsByEmployeeAndDate(employeeId, shift.date)
-    
-    let totalHours = 0
-    for (let i = 0; i < existingShifts.length; i++) {
-        const duration = computeShiftDuration(existingShifts[i].startTime, existingShifts[i].endTime)
-        totalHours = totalHours + duration
-    }
-    
-    const newShiftDuration = computeShiftDuration(shift.startTime, shift.endTime)
-    const projectedTotal = totalHours + newShiftDuration
-    
-    if (projectedTotal > maxDailyHours) {
-        return { 
-            canAssign: false, 
-            reason: 'Assignment would exceed maximum daily hours of ' + maxDailyHours + ' (would be ' + projectedTotal + ' hours)' 
-        }
-    }
-    
-    return { canAssign: true }
-}
+async function updateEmployee(employeeId, name, phone) {
+    const trimmedName = name.trim()
+    const trimmedPhone = phone.trim()
+    const errors = []
 
-/**
- * Assigns an employee to a shift
- * @param {string} employeeId - The employee ID
- * @param {string} shiftId - The shift ID
- * @returns {Promise<Object>} Object containing success status and message
- */
-async function assignEmployeeToShift(employeeId, shiftId) {
-    const validation = await validateShiftAssignment(employeeId, shiftId)
-    
-    if (!validation.canAssign) {
-        return { success: false, message: validation.reason }
+    if (trimmedName === '') {
+        errors.push('Name must not be empty.')
     }
-    
+
+    const phoneRegex = /^\d{4}-\d{4}$/
+    if (!phoneRegex.test(trimmedPhone)) {
+        errors.push('Phone number must be in the format ####-#### (4 digits, dash, 4 digits).')
+    }
+
+    if (errors.length > 0) {
+        return { success: false, errors: errors }
+    }
+
     try {
-        const assignments = await persistence.loadAssignments()
-        const newAssignment = {
-            employeeId: employeeId,
-            shiftId: shiftId
-        }
-        
-        assignments.push(newAssignment)
-        await persistence.saveAssignments(assignments)
-        
-        return { success: true, message: 'Shift Recorded' }
+        await persistence.updateEmployee(employeeId, trimmedName, trimmedPhone)
+        return { success: true }
     } catch (error) {
-        return { success: false, message: error.message }
+        return { success: false, errors: [error.message] }
     }
 }
 
 /**
- * Gets the schedule for a specific employee sorted by date and time
+ * Gets the schedule for a specific employee sorted by date and start time
  * @param {string} employeeId - The employee ID
  * @returns {Promise<Object>} Object containing employee existence status and sorted shifts array
  */
@@ -166,9 +110,9 @@ async function getEmployeeSchedule(employeeId) {
     if (!employee) {
         return { exists: false, shifts: [] }
     }
-    
+
     const shifts = await persistence.findShiftsByEmployee(employeeId)
-    
+
     for (let i = 0; i < shifts.length - 1; i++) {
         for (let j = 0; j < shifts.length - i - 1; j++) {
             const current = shifts[j].date + shifts[j].startTime
@@ -180,7 +124,7 @@ async function getEmployeeSchedule(employeeId) {
             }
         }
     }
-    
+
     return { exists: true, shifts: shifts }
 }
 
@@ -189,7 +133,6 @@ module.exports = {
     getAllEmployees,
     getNextEmployeeId,
     addEmployee,
-    validateShiftAssignment,
-    assignEmployeeToShift,
+    updateEmployee,
     getEmployeeSchedule
 }

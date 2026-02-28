@@ -1,30 +1,17 @@
+const { MongoClient } = require('mongodb')
 const fs = require('fs').promises
 
-/**
- * Loads employee data from the employees.json file
- * @returns {Promise<Array>} Array of employee objects
- */
-async function loadEmployees() {
-    const data = await fs.readFile('employees.json', 'utf8')
-    return JSON.parse(data)
-}
+let client = undefined
 
 /**
- * Loads shift data from the shifts.json file
- * @returns {Promise<Array>} Array of shift objects
+ * Connects to the MongoDB database if not already connected
+ * @returns {Promise<void>}
  */
-async function loadShifts() {
-    const data = await fs.readFile('shifts.json', 'utf8')
-    return JSON.parse(data)
-}
-
-/**
- * Loads assignment data from the assignments.json file
- * @returns {Promise<Array>} Array of assignment objects
- */
-async function loadAssignments() {
-    const data = await fs.readFile('assignments.json', 'utf8')
-    return JSON.parse(data)
+async function connectDatabase() {
+    if (!client) {
+        client = new MongoClient('mongodb+srv://rizan-mohammed:raifah123@infs3201-winter2026.hjdo7u9.mongodb.net/')
+        await client.connect()
+    }
 }
 
 /**
@@ -37,21 +24,15 @@ async function loadConfig() {
 }
 
 /**
- * Saves employee data to the employees.json file
- * @param {Array} employees - Array of employee objects to save
- * @returns {Promise<void>}
+ * Retrieves all employees from the database
+ * @returns {Promise<Array>} Array of all employee objects
  */
-async function saveEmployees(employees) {
-    await fs.writeFile('employees.json', JSON.stringify(employees, null, 4))
-}
-
-/**
- * Saves assignment data to the assignments.json file
- * @param {Array} assignments - Array of assignment objects to save
- * @returns {Promise<void>}
- */
-async function saveAssignments(assignments) {
-    await fs.writeFile('assignments.json', JSON.stringify(assignments, null, 4))
+async function loadEmployees() {
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let employees = db.collection('employees')
+    let result = await employees.find()
+    return await result.toArray()
 }
 
 /**
@@ -60,13 +41,38 @@ async function saveAssignments(assignments) {
  * @returns {Promise<Object|null>} The employee object if found, null otherwise
  */
 async function findEmployee(employeeId) {
-    const employees = await loadEmployees()
-    for (let i = 0; i < employees.length; i++) {
-        if (employees[i].employeeId === employeeId) {
-            return employees[i]
-        }
-    }
-    return null
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let employees = db.collection('employees')
+    let result = await employees.find({ employeeId: employeeId })
+    let resultData = await result.toArray()
+    return resultData[0] || null
+}
+
+/**
+ * Inserts a new employee into the database
+ * @param {Object} employeeData - The employee object to insert
+ * @returns {Promise<void>}
+ */
+async function insertEmployee(employeeData) {
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let employees = db.collection('employees')
+    await employees.insertOne(employeeData)
+}
+
+/**
+ * Updates an existing employee's name and phone number
+ * @param {string} employeeId - The employee ID to update
+ * @param {string} name - The new name
+ * @param {string} phone - The new phone number
+ * @returns {Promise<void>}
+ */
+async function updateEmployee(employeeId, name, phone) {
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let employees = db.collection('employees')
+    await employees.updateOne({ employeeId: employeeId }, { $set: { name: name, phone: phone } })
 }
 
 /**
@@ -75,61 +81,64 @@ async function findEmployee(employeeId) {
  * @returns {Promise<Object|null>} The shift object if found, null otherwise
  */
 async function findShift(shiftId) {
-    const shifts = await loadShifts()
-    for (let i = 0; i < shifts.length; i++) {
-        if (shifts[i].shiftId === shiftId) {
-            return shifts[i]
-        }
-    }
-    return null
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let shifts = db.collection('shifts')
+    let result = await shifts.find({ shiftId: shiftId })
+    let resultData = await result.toArray()
+    return resultData[0] || null
 }
 
 /**
- * Finds all shifts assigned to a sepecific employee
+ * Finds all shifts assigned to a specific employee
  * @param {string} employeeId - The employee ID to search for
  * @returns {Promise<Array>} Array of shift objects assigned to the employee
  */
 async function findShiftsByEmployee(employeeId) {
-    const assignments = await loadAssignments()
-    const shifts = await loadShifts()
-    const result = []
-    
-    for (let i = 0; i < assignments.length; i++) {
-        if (assignments[i].employeeId === employeeId) {
-            for (let j = 0; j < shifts.length; j++) {
-                if (shifts[j].shiftId === assignments[i].shiftId) {
-                    result.push(shifts[j])
-                    break
-                }
-            }
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let assignments = db.collection('assignments')
+    let shifts = db.collection('shifts')
+
+    let assignmentResult = await assignments.find({ employeeId: employeeId })
+    let assignmentData = await assignmentResult.toArray()
+
+    let result = []
+    for (let i = 0; i < assignmentData.length; i++) {
+        let shiftResult = await shifts.find({ shiftId: assignmentData[i].shiftId })
+        let shiftData = await shiftResult.toArray()
+        if (shiftData[0]) {
+            result.push(shiftData[0])
         }
     }
-    
+
     return result
 }
 
 /**
- * Finds all assignments for a specific employee on a specific date
+ * Finds all shifts assigned to a specific employee on a specific date
  * @param {string} employeeId - The employee ID
  * @param {string} date - The date in YYYY-MM-DD format
  * @returns {Promise<Array>} Array of shift objects on that date
  */
 async function findShiftsByEmployeeAndDate(employeeId, date) {
-    const assignments = await loadAssignments()
-    const shifts = await loadShifts()
-    const result = []
-    
-    for (let i = 0; i < assignments.length; i++) {
-        if (assignments[i].employeeId === employeeId) {
-            for (let j = 0; j < shifts.length; j++) {
-                if (shifts[j].shiftId === assignments[i].shiftId && shifts[j].date === date) {
-                    result.push(shifts[j])
-                    break
-                }
-            }
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let assignments = db.collection('assignments')
+    let shifts = db.collection('shifts')
+
+    let assignmentResult = await assignments.find({ employeeId: employeeId })
+    let assignmentData = await assignmentResult.toArray()
+
+    let result = []
+    for (let i = 0; i < assignmentData.length; i++) {
+        let shiftResult = await shifts.find({ shiftId: assignmentData[i].shiftId, date: date })
+        let shiftData = await shiftResult.toArray()
+        if (shiftData[0]) {
+            result.push(shiftData[0])
         }
     }
-    
+
     return result
 }
 
@@ -140,23 +149,20 @@ async function findShiftsByEmployeeAndDate(employeeId, date) {
  * @returns {Promise<boolean>} True if assignment exists, false otherwise
  */
 async function assignmentExists(employeeId, shiftId) {
-    const assignments = await loadAssignments()
-    for (let i = 0; i < assignments.length; i++) {
-        if (assignments[i].employeeId === employeeId && assignments[i].shiftId === shiftId) {
-            return true
-        }
-    }
-    return false
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let assignments = db.collection('assignments')
+    let result = await assignments.find({ employeeId: employeeId, shiftId: shiftId })
+    let resultData = await result.toArray()
+    return resultData.length > 0
 }
 
 module.exports = {
-    loadEmployees,
-    loadShifts,
-    loadAssignments,
     loadConfig,
-    saveEmployees,
-    saveAssignments,
+    loadEmployees,
     findEmployee,
+    insertEmployee,
+    updateEmployee,
     findShift,
     findShiftsByEmployee,
     findShiftsByEmployeeAndDate,

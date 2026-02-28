@@ -1,136 +1,132 @@
-const prompt = require('prompt-sync')()
+const express = require('express')
+const exphbs = require('express-handlebars')
 const business = require('./business')
+const persistence = require('./persistance')
+
+const app = express()
+const PORT = 8001
+
+app.engine('hbs', exphbs.engine({ extname: '.hbs', defaultLayout: false }))
+app.set('view engine', 'hbs')
+app.set('views', './views')
+
+app.use(express.urlencoded({ extended: false }))
 
 /**
- * Displays the main menu options to the user
- * @returns {void}
- */
-function showMenu() {
-    console.log('\n1. Show all employees')
-    console.log('2. Add new employee')
-    // console.log('3. Assign employee to shift')
-    console.log('3. View employee schedule')
-    console.log('4. Exit')
-}
-
-/**
- * Displays all employees in a formatted table
+ * GET / - Shows the landing page with a list of all employees
  * @returns {Promise<void>}
  */
-async function showAllEmployees() {
+app.get('/', async (req, res) => {
     try {
         const employees = await business.getAllEmployees()
-        
-        let maxNameLength = 20
-        for (let i = 0; i < employees.length; i++) {
-            if (employees[i].name.length > maxNameLength) {
-                maxNameLength = employees[i].name.length
-            }
-        }
-    
-        console.log('\nEmployee ID Name' + ' '.repeat(maxNameLength - 4) + ' Phone')
-        console.log('-----------' + ' ' + '-'.repeat(maxNameLength) + ' ---------')
-
-        for (let i = 0; i < employees.length; i++) {
-            const emp = employees[i]
-            const nameSpaces = maxNameLength - emp.name.length
-            console.log(emp.employeeId + ' '.repeat(12 - emp.employeeId.length) + emp.name + ' '.repeat(nameSpaces + 1) + emp.phone)
-        }
+        res.render('index', { employees: employees })
     } catch (error) {
-        console.log('Error loading employees:', error.message)
+        res.send('Error loading employees: ' + error.message)
     }
-}
+})
 
 /**
- * Prompts user for employe information and adds a new employee
+ * GET /employee/add - Shows the add employee form
+ * @returns {void}
+ */
+app.get('/employee/add', (req, res) => {
+    res.render('add-employee')
+})
+
+/**
+ * POST /employee/add - Validates and adds a new employee then redirects (PRG pattern)
  * @returns {Promise<void>}
  */
-async function addNewEmployee() {
+app.post('/employee/add', async (req, res) => {
+    const name = (req.body.name || '').trim()
+    const phone = (req.body.phone || '').trim()
+    const errors = []
+
+    if (name === '') {
+        errors.push('Name must not be empty.')
+    }
+
+    const phoneRegex = /^\d{4}-\d{4}$/
+    if (!phoneRegex.test(phone)) {
+        errors.push('Phone number must be in the format ####-#### (4 digits, dash, 4 digits).')
+    }
+
+    if (errors.length > 0) {
+        return res.send(errors.join('<br>'))
+    }
+
+    const result = await business.addEmployee(name, phone)
+
+    if (!result.success) {
+        return res.send('Error adding employee: ' + result.error)
+    }
+
+    res.redirect('/')
+})
+
+/**
+ * GET /employee/:id - Shows employee details and shift schedule
+ * @returns {Promise<void>}
+ */
+app.get('/employee/:id', async (req, res) => {
     try {
-        const name = prompt('Enter employee name: ')
-        const phone = prompt('Enter phone number: ')
-        
-        const result = await business.addEmployee(name, phone)
-        
-        if (result.success) {
-            console.log('Employee added...')
-        } else {
-            console.log('Error adding employee:', result.error)
-        }
-    } catch (error) {
-        console.log('Error adding employee:', error.message)
-    }
-}
+        const employeeId = req.params.id
+        const employee = await persistence.findEmployee(employeeId)
 
-// "We will not be implementing this feature in Assignment 3, and the database design right now doesn’t support it well 
-// (it might be brought back in during Assignment 4). "
-// /**
-//  * Prompts user for employee and shift IDs and assigns the employee to the shift
-//  * @returns {Promise<void>}
-//  */
-// async function assignShift() {
-//     try {
-//         const employeeId = prompt('Enter employee ID: ')
-//         const shiftId = prompt('Enter shift ID: ')
-        
-//         const result = await business.assignEmployeeToShift(employeeId, shiftId)
-//         console.log(result.message)
-//     } catch (error) {
-//         console.log('Error assigning shift:', error.message)
-//     }
-// }
+        if (!employee) {
+            return res.send('Employee not found.')
+        }
+
+        const scheduleResult = await business.getEmployeeSchedule(employeeId)
+        const shifts = scheduleResult.shifts
+
+        for (let i = 0; i < shifts.length; i++) {
+            const hour = parseInt(shifts[i].startTime.split(':')[0])
+            shifts[i].isMorning = hour < 12
+        }
+
+        res.render('employee-details', { employee: employee, shifts: shifts })
+    } catch (error) {
+        res.send('Error loading employee: ' + error.message)
+    }
+})
 
 /**
- * Prompts user for employee ID and displays their schedule in CSV format
+ * GET /employee/:id/edit - Shows edit form pre-filled with existing employee data
  * @returns {Promise<void>}
  */
-async function viewEmployeeSchedule() {
+app.get('/employee/:id/edit', async (req, res) => {
     try {
-        const employeeId = prompt('Enter employee ID: ')
-        
-        console.log('date,startTime,endTime')
-        
-        const result = await business.getEmployeeSchedule(employeeId)
-        
-        if (!result.exists) {
-            return
+        const employee = await persistence.findEmployee(req.params.id)
+
+        if (!employee) {
+            return res.send('Employee not found.')
         }
-        
-        for (let i = 0; i < result.shifts.length; i++) {
-            const shift = result.shifts[i]
-            console.log(shift.date + ',' + shift.startTime + ',' + shift.endTime)
-        }
+
+        res.render('edit-employee', { employee: employee })
     } catch (error) {
-        console.log('Error viewing schedule:', error.message)
+        res.send('Error loading employee: ' + error.message)
     }
-}
+})
 
 /**
- * Main function that runs the menu-driven application loop
+ * POST /employee/:id/edit - Validates and updates employee then redirects (PRG pattern)
  * @returns {Promise<void>}
  */
-async function main() {
-    let loop = true
-    
-    while (loop) {
-        showMenu()
-        const choice = prompt('What is your choice? ')
-        if (choice === '1') {
-            await showAllEmployees()
-        } else if (choice === '2') {
-            await addNewEmployee()
-        } 
-        // else if (choice === '3') {
-        //     await assignShift()
-        // } 
-        else if (choice === '3') {
-            await viewEmployeeSchedule()
-        } else if (choice === '4') {
-            loop = false
-        } else {
-            console.log('Invalid choice, please try again')
-        }
-    }
-}
+app.post('/employee/:id/edit', async (req, res) => {
+    const employeeId = req.params.id
+    const name = req.body.name || ''
+    const phone = req.body.phone || ''
 
-main()
+    const result = await business.updateEmployee(employeeId, name, phone)
+
+    if (!result.success) {
+        return res.send(result.errors.join('<br>'))
+    }
+
+    res.redirect('/')
+})
+
+app.listen(PORT, () => {
+    console.log('Server running at http://localhost:' + PORT)
+})
