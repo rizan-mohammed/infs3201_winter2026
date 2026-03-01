@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit {{employee.name}}</title>
+</head>
+<body>
+    <h1>Edit Employee</h1>
+    <form action="/employee/{{employee.employeeId}}/edit" method="POST">
+        <label for="name">Name</label><br>
+        <input type="text" id="name" name="name" value="{{employee.name}}"><br><br>
+
+        <label for="phone">Phone (####-####)</label><br>
+        <input type="text" id="phone" name="phone" value="{{employee.phone}}"><br><br>
+
+        <button type="submit">Save Changes</button>
+    </form>
+    <a href="/employee/{{employee.employeeId}}">Cancel</a>
+</body>
+</html>

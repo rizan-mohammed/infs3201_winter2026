@@ -52,7 +52,7 @@ app.post('/employee/add', async (req, res) => {
     }
 
     if (errors.length > 0) {
-        return res.send(errors.join('<br>'))
+        return res.send(errors.join('<br>') + '<br><br><a href="/employee/add">Go back</a>')
     }
 
     const result = await business.addEmployee(name, phone)
@@ -121,12 +121,12 @@ app.post('/employee/:id/edit', async (req, res) => {
     const result = await business.updateEmployee(employeeId, name, phone)
 
     if (!result.success) {
-        return res.send(result.errors.join('<br>'))
+        return res.send(result.errors.join('<br>') + '<br><br><a href="/employee/' + employeeId + '/edit">Go back</a>')
     }
 
     res.redirect('/')
 })
 
-app.listen(PORT, () => {
-    console.log('Server running at http://localhost:' + PORT)
+app.listen(8001, () => {
+    console.log('Server running at http://localhost:' + 8001)
 })

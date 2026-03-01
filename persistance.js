@@ -9,8 +9,13 @@ let client = undefined
  */
 async function connectDatabase() {
     if (!client) {
-        client = new MongoClient('mongodb+srv://rizan-mohammed:raifah123@infs3201-winter2026.hjdo7u9.mongodb.net/')
-        await client.connect()
+        client = new MongoClient('mongodb://rizan-mohammed:raifah123@ac-zw40ybj-shard-00-00.hjdo7u9.mongodb.net:27017,ac-zw40ybj-shard-00-01.hjdo7u9.mongodb.net:27017,ac-zw40ybj-shard-00-02.hjdo7u9.mongodb.net:27017/infs3201_winter2026?ssl=true&replicaSet=atlas-5dzh15-shard-0&authSource=admin')        
+        try {
+            await client.connect()
+        } catch (error) {
+            client = undefined
+            throw error
+        }
     }
 }
 
