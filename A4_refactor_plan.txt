@@ -1,0 +1,58 @@
+COLLECTIONS THAT WILL CHANGE
+1. employees
+   - Remove the employeeId field (e.g. "E001")
+   - Will be identified by MongoDB _id (ObjectId) going forward
+
+2. shifts
+   - Remove the shiftId field (e.g. "S001")
+   - Add a new "employees" array field that embeds ObjectIds of assigned employees
+   - Will be identified by MongoDB _id (ObjectId) going forward
+
+3. assignments
+   - This collection will be deleted entirely
+   - Its data is embedded directly into the shifts.employees array
+
+NEW COLLECTIONS
+4. users
+   - Contains username and sha256 hashed password
+   - Created manually in Compass
+
+5. security_log
+   - Created automatically by middleware
+   - Records timestamp, username, URL, and HTTP method for every request
+
+
+PERSISTENCE FUNCTIONS TO MODIFY OR REMOVE
+- findEmployee(employeeId) -> findEmployeeById(id) using ObjectId
+- updateEmployee(employeeId, ...) -> updateEmployeeById(id, ...) using ObjectId
+- insertEmployee(data) -> stays the same but no longer stores employeeId field
+- loadEmployees() -> stays the same
+- findShift(shiftId) -> removed, no longer needed
+- findShiftsByEmployee(employeeId) -> findShiftsByEmployee(objectId) using ObjectId lookup inside shifts.employees array
+- findShiftsByEmployeeAndDate(employeeId, date) -> removed, no longer needed after schema change
+- assignmentExists() -> removed, assignments collection is gone
+- NEW: findUserByUsername(username) for authentication
+- NEW: insertSecurityLog(entry) for logging middleware
+
+
+BUSINESS LOGIC CHANGES
+- getNextEmployeeId() -> removed, no longer generating E### IDs
+- addEmployee() -> no longer sets employeeId field
+- validateShiftAssignment() -> removed, assignments collection gone
+- assignEmployeeToShift() -> removed
+- getEmployeeSchedule() -> updated to use ObjectId instead of employeeId string
+
+
+HOW EMBEDDED ARRAYS AFFECT UPDATE OPERATIONS
+- To add an employee to a shift: use $push on shifts.employees array
+- To find shifts for an employee: use $elemMatch or direct array match on shifts.employees
+- Cannot use simple find({employeeId: x}) anymore, must use ObjectId comparison
+- Updates to employees no longer need to touch assignments collection
+
+
+RISKS AND COMPLICATIONS
+- All URL params that used to be E001 strings are now 24-character ObjectId hex strings
+- Any place in index.js that passes employeeId as a URL param must use _id.toString()
+- Handlebars templates must use _id instead of employeeId for links
+- The transform must be run exactly once - running it twice would corrupt the employees arrays in shifts
+- Must back up the database in Compass before running transform_db.js
