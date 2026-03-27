@@ -56,7 +56,6 @@ app.post('/employee/add', async (req, res) => {
     }
 
     const result = await business.addEmployee(name, phone)
-
     if (!result.success) {
         return res.send('Error adding employee: ' + result.error)
     }
@@ -70,14 +69,12 @@ app.post('/employee/add', async (req, res) => {
  */
 app.get('/employee/:id', async (req, res) => {
     try {
-        const employeeId = req.params.id
-        const employee = await persistence.findEmployee(employeeId)
-
+        const employee = await persistence.findEmployeeById(req.params.id)
         if (!employee) {
             return res.send('Employee not found.')
         }
 
-        const scheduleResult = await business.getEmployeeSchedule(employeeId)
+        const scheduleResult = await business.getEmployeeSchedule(req.params.id)
         const shifts = scheduleResult.shifts
 
         for (let i = 0; i < shifts.length; i++) {
@@ -97,12 +94,10 @@ app.get('/employee/:id', async (req, res) => {
  */
 app.get('/employee/:id/edit', async (req, res) => {
     try {
-        const employee = await persistence.findEmployee(req.params.id)
-
+        const employee = await persistence.findEmployeeById(req.params.id)
         if (!employee) {
             return res.send('Employee not found.')
         }
-
         res.render('edit-employee', { employee: employee })
     } catch (error) {
         res.send('Error loading employee: ' + error.message)
@@ -114,19 +109,18 @@ app.get('/employee/:id/edit', async (req, res) => {
  * @returns {Promise<void>}
  */
 app.post('/employee/:id/edit', async (req, res) => {
-    const employeeId = req.params.id
+    const id = req.params.id
     const name = req.body.name || ''
     const phone = req.body.phone || ''
 
-    const result = await business.updateEmployee(employeeId, name, phone)
-
+    const result = await business.updateEmployee(id, name, phone)
     if (!result.success) {
-        return res.send(result.errors.join('<br>') + '<br><br><a href="/employee/' + employeeId + '/edit">Go back</a>')
+        return res.send(result.errors.join('<br>') + '<br><br><a href="/employee/' + id + '/edit">Go back</a>')
     }
 
     res.redirect('/')
 })
 
-app.listen(8001, () => {
-    console.log('Server running at http://localhost:' + 8001)
+app.listen(PORT, () => {
+    console.log('Server running at http://localhost:' + PORT)
 })

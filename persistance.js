@@ -1,6 +1,6 @@
 const dns = require('dns')
 dns.setServers(['8.8.8.8', '8.8.4.4'])
-const { MongoClient } = require('mongodb')
+const { MongoClient, ObjectId } = require('mongodb')
 const fs = require('fs').promises
 
 let client = undefined
@@ -11,7 +11,7 @@ let client = undefined
  */
 async function connectDatabase() {
     if (!client) {
-        client = new MongoClient('mongodb://rizan-mohammed:raifah123@ac-zw40ybj-shard-00-00.hjdo7u9.mongodb.net:27017,ac-zw40ybj-shard-00-01.hjdo7u9.mongodb.net:27017,ac-zw40ybj-shard-00-02.hjdo7u9.mongodb.net:27017/infs3201_winter2026?ssl=true&replicaSet=atlas-5dzh15-shard-0&authSource=admin')        
+        client = new MongoClient('mongodb+srv://rizan-mohammed:raifah123@infs3201-winter2026.hjdo7u9.mongodb.net/')
         try {
             await client.connect()
         } catch (error) {
@@ -43,15 +43,15 @@ async function loadEmployees() {
 }
 
 /**
- * Finds a single employee by their employee ID
- * @param {string} employeeId - The employee ID to search for
+ * Finds a single employee by their MongoDB ObjectId
+ * @param {string} id - The employee ObjectId string
  * @returns {Promise<Object|null>} The employee object if found, null otherwise
  */
-async function findEmployee(employeeId) {
+async function findEmployeeById(id) {
     await connectDatabase()
     let db = client.db('infs3201_winter2026')
     let employees = db.collection('employees')
-    let result = await employees.find({ employeeId: employeeId })
+    let result = await employees.find({ _id: new ObjectId(id) })
     let resultData = await result.toArray()
     return resultData[0] || null
 }
@@ -59,119 +59,48 @@ async function findEmployee(employeeId) {
 /**
  * Inserts a new employee into the database
  * @param {Object} employeeData - The employee object to insert
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} The result object containing the inserted id
  */
 async function insertEmployee(employeeData) {
     await connectDatabase()
     let db = client.db('infs3201_winter2026')
     let employees = db.collection('employees')
-    await employees.insertOne(employeeData)
+    let result = await employees.insertOne(employeeData)
+    return result
 }
 
 /**
- * Updates an existing employee's name and phone number
- * @param {string} employeeId - The employee ID to update
+ * Updates an existing employee's name and phone number by ObjectId
+ * @param {string} id - The employee ObjectId string
  * @param {string} name - The new name
  * @param {string} phone - The new phone number
  * @returns {Promise<void>}
  */
-async function updateEmployee(employeeId, name, phone) {
+async function updateEmployeeById(id, name, phone) {
     await connectDatabase()
     let db = client.db('infs3201_winter2026')
     let employees = db.collection('employees')
-    await employees.updateOne({ employeeId: employeeId }, { $set: { name: name, phone: phone } })
+    await employees.updateOne({ _id: new ObjectId(id) }, { $set: { name: name, phone: phone } })
 }
 
 /**
- * Finds a single shift by its shift ID
- * @param {string} shiftId - The shift ID to search for
- * @returns {Promise<Object|null>} The shift object if found, null otherwise
- */
-async function findShift(shiftId) {
-    await connectDatabase()
-    let db = client.db('infs3201_winter2026')
-    let shifts = db.collection('shifts')
-    let result = await shifts.find({ shiftId: shiftId })
-    let resultData = await result.toArray()
-    return resultData[0] || null
-}
-
-/**
- * Finds all shifts assigned to a specific employee
- * @param {string} employeeId - The employee ID to search for
+ * Finds all shifts assigned to a specific employee using their ObjectId
+ * @param {string} id - The employee ObjectId string
  * @returns {Promise<Array>} Array of shift objects assigned to the employee
  */
-async function findShiftsByEmployee(employeeId) {
+async function findShiftsByEmployee(id) {
     await connectDatabase()
     let db = client.db('infs3201_winter2026')
-    let assignments = db.collection('assignments')
     let shifts = db.collection('shifts')
-
-    let assignmentResult = await assignments.find({ employeeId: employeeId })
-    let assignmentData = await assignmentResult.toArray()
-
-    let result = []
-    for (let i = 0; i < assignmentData.length; i++) {
-        let shiftResult = await shifts.find({ shiftId: assignmentData[i].shiftId })
-        let shiftData = await shiftResult.toArray()
-        if (shiftData[0]) {
-            result.push(shiftData[0])
-        }
-    }
-
-    return result
-}
-
-/**
- * Finds all shifts assigned to a specific employee on a specific date
- * @param {string} employeeId - The employee ID
- * @param {string} date - The date in YYYY-MM-DD format
- * @returns {Promise<Array>} Array of shift objects on that date
- */
-async function findShiftsByEmployeeAndDate(employeeId, date) {
-    await connectDatabase()
-    let db = client.db('infs3201_winter2026')
-    let assignments = db.collection('assignments')
-    let shifts = db.collection('shifts')
-
-    let assignmentResult = await assignments.find({ employeeId: employeeId })
-    let assignmentData = await assignmentResult.toArray()
-
-    let result = []
-    for (let i = 0; i < assignmentData.length; i++) {
-        let shiftResult = await shifts.find({ shiftId: assignmentData[i].shiftId, date: date })
-        let shiftData = await shiftResult.toArray()
-        if (shiftData[0]) {
-            result.push(shiftData[0])
-        }
-    }
-
-    return result
-}
-
-/**
- * Checks if a specific assignment already exists
- * @param {string} employeeId - The employee ID
- * @param {string} shiftId - The shift ID
- * @returns {Promise<boolean>} True if assignment exists, false otherwise
- */
-async function assignmentExists(employeeId, shiftId) {
-    await connectDatabase()
-    let db = client.db('infs3201_winter2026')
-    let assignments = db.collection('assignments')
-    let result = await assignments.find({ employeeId: employeeId, shiftId: shiftId })
-    let resultData = await result.toArray()
-    return resultData.length > 0
+    let result = await shifts.find({ employees: new ObjectId(id) })
+    return await result.toArray()
 }
 
 module.exports = {
     loadConfig,
     loadEmployees,
-    findEmployee,
+    findEmployeeById,
     insertEmployee,
-    updateEmployee,
-    findShift,
-    findShiftsByEmployee,
-    findShiftsByEmployeeAndDate,
-    assignmentExists
+    updateEmployeeById,
+    findShiftsByEmployee
 }

@@ -9,12 +9,10 @@
 </head>
 <body>
     <h1>{{employee.name}}</h1>
-    <p><strong>Employee ID:</strong> {{employee.employeeId}}</p>
     <p><strong>Phone:</strong> {{employee.phone}}</p>
-    <a href="/employee/{{employee.employeeId}}/edit">Edit Details</a>
+    <a href="/employee/{{employee._id}}/edit">Edit Details</a>
 
     <h2>Shifts</h2>
-
     {{#if shifts.length}}
         <table border="1">
             <thead>
