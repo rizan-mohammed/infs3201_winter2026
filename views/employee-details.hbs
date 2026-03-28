@@ -9,6 +9,11 @@
 </head>
 <body>
     <h1>{{employee.name}}</h1>
+
+    {{#if employee.photo}}
+        <img src="/uploads/{{employee.photo}}" alt="{{employee.name}}" width="150"><br><br>
+    {{/if}}
+
     <p><strong>Phone:</strong> {{employee.phone}}</p>
     <a href="/employee/{{employee._id}}/edit">Edit Details</a>
 

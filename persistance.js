@@ -70,17 +70,22 @@ async function insertEmployee(employeeData) {
 }
 
 /**
- * Updates an existing employee's name and phone number by ObjectId
+ * Updates an existing employee's name, phone, and optionally photo by ObjectId
  * @param {string} id - The employee ObjectId string
  * @param {string} name - The new name
  * @param {string} phone - The new phone number
+ * @param {string|null} photo - New photo filename or null if unchanged
  * @returns {Promise<void>}
  */
-async function updateEmployeeById(id, name, phone) {
+async function updateEmployeeById(id, name, phone, photo) {
     await connectDatabase()
     let db = client.db('infs3201_winter2026')
     let employees = db.collection('employees')
-    await employees.updateOne({ _id: new ObjectId(id) }, { $set: { name: name, phone: phone } })
+    let fields = { name: name, phone: phone }
+    if (photo) {
+        fields.photo = photo
+    }
+    await employees.updateOne({ _id: new ObjectId(id) }, { $set: fields })
 }
 
 /**

@@ -12,11 +12,15 @@ async function getAllEmployees() {
  * Adds a new employee to the system
  * @param {string} name - Employee name
  * @param {string} phone - Employee phone number
+ * @param {string|null} photo - Photo filename or null if no photo uploaded
  * @returns {Promise<Object>} Object containing success status and the new employee or error message
  */
-async function addEmployee(name, phone) {
+async function addEmployee(name, phone, photo) {
     try {
         const newEmployee = { name: name, phone: phone }
+        if (photo) {
+            newEmployee.photo = photo
+        }
         await persistence.insertEmployee(newEmployee)
         return { success: true, employee: newEmployee }
     } catch (error) {
@@ -29,9 +33,10 @@ async function addEmployee(name, phone) {
  * @param {string} id - The employee ObjectId string
  * @param {string} name - The new name (will be trimmed)
  * @param {string} phone - The new phone number (will be trimmed)
+ * @param {string|null} photo - New photo filename or null if no new photo uploaded
  * @returns {Promise<Object>} Object containing success status and errors array if validation failed
  */
-async function updateEmployee(id, name, phone) {
+async function updateEmployee(id, name, phone, photo) {
     const trimmedName = name.trim()
     const trimmedPhone = phone.trim()
     const errors = []
@@ -50,7 +55,7 @@ async function updateEmployee(id, name, phone) {
     }
 
     try {
-        await persistence.updateEmployeeById(id, trimmedName, trimmedPhone)
+        await persistence.updateEmployeeById(id, trimmedName, trimmedPhone, photo)
         return { success: true }
     } catch (error) {
         return { success: false, errors: [error.message] }

@@ -6,12 +6,20 @@
 </head>
 <body>
     <h1>Edit Employee</h1>
-    <form action="/employee/{{employee._id}}/edit" method="POST">
+
+    {{#if employee.photo}}
+        <img src="/uploads/{{employee.photo}}" alt="{{employee.name}}" width="150"><br><br>
+    {{/if}}
+
+    <form action="/employee/{{employee._id}}/edit" method="POST" enctype="multipart/form-data">
         <label for="name">Name</label><br>
         <input type="text" id="name" name="name" value="{{employee.name}}"><br><br>
 
         <label for="phone">Phone (####-####)</label><br>
         <input type="text" id="phone" name="phone" value="{{employee.phone}}"><br><br>
+
+        <label for="photo">Photo (leave blank to keep existing)</label><br>
+        <input type="file" id="photo" name="photo" accept="image/*"><br><br>
 
         <button type="submit">Save Changes</button>
     </form>

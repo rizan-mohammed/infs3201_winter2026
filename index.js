@@ -3,6 +3,7 @@ const exphbs = require('express-handlebars')
 const crypto = require('crypto')
 const business = require('./business')
 const persistence = require('./persistance')
+const fileUpload = require('express-fileupload')
 
 const app = express()
 const PORT = 8001
@@ -13,6 +14,8 @@ app.set('view engine', 'hbs')
 app.set('views', './views')
 
 app.use(express.urlencoded({ extended: false }))
+app.use(fileUpload())
+app.use(express.static('public'))
 
 /**
  * Hashes a password string using SHA256
@@ -193,7 +196,14 @@ app.post('/employee/add', async (req, res) => {
         return res.send(errors.join('<br>') + '<br><br><a href="/employee/add">Go back</a>')
     }
 
-    const result = await business.addEmployee(name, phone)
+    let photoFilename = null
+    if (req.files && req.files.photo) {
+        const photo = req.files.photo
+        photoFilename = Date.now() + '_' + photo.name
+        await photo.mv('public/uploads/' + photoFilename)
+    }
+
+    const result = await business.addEmployee(name, phone, photoFilename)
     if (!result.success) {
         return res.send('Error adding employee: ' + result.error)
     }
@@ -251,7 +261,14 @@ app.post('/employee/:id/edit', async (req, res) => {
     const name = req.body.name || ''
     const phone = req.body.phone || ''
 
-    const result = await business.updateEmployee(id, name, phone)
+    let photoFilename = null
+    if (req.files && req.files.photo) {
+        const photo = req.files.photo
+        photoFilename = Date.now() + '_' + photo.name
+        await photo.mv('public/uploads/' + photoFilename)
+    }
+
+    const result = await business.updateEmployee(id, name, phone, photoFilename)
     if (!result.success) {
         return res.send(result.errors.join('<br>') + '<br><br><a href="/employee/' + id + '/edit">Go back</a>')
     }
