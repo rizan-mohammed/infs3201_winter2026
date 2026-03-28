@@ -96,11 +96,39 @@ async function findShiftsByEmployee(id) {
     return await result.toArray()
 }
 
+/**
+ * Finds a user by their username
+ * @param {string} username - The username to search for
+ * @returns {Promise<Object|null>} The user object if found, null otherwise
+ */
+async function findUserByUsername(username) {
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let users = db.collection('users')
+    let result = await users.find({ username: username })
+    let resultData = await result.toArray()
+    return resultData[0] || null
+}
+
+/**
+ * Inserts a security log entry into the security_log collection
+ * @param {Object} logEntry - Object containing timestamp, username, url, method
+ * @returns {Promise<void>}
+ */
+async function insertSecurityLog(logEntry) {
+    await connectDatabase()
+    let db = client.db('infs3201_winter2026')
+    let logs = db.collection('security_log')
+    await logs.insertOne(logEntry)
+}
+
 module.exports = {
     loadConfig,
     loadEmployees,
     findEmployeeById,
     insertEmployee,
     updateEmployeeById,
-    findShiftsByEmployee
+    findShiftsByEmployee,
+    findUserByUsername,
+    insertSecurityLog
 }

@@ -6,6 +6,8 @@
 </head>
 <body>
     <h1>Employees</h1>
+    <a href="/logout">Logout</a>
+
     {{#if employees.length}}
         <ul>
             {{#each employees}}
@@ -15,6 +17,7 @@
     {{else}}
         <p>No employees found.</p>
     {{/if}}
+
     <a href="/employee/add">Add New Employee</a>
 </body>
 </html>
