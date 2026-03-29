@@ -17,6 +17,7 @@ app.use(express.urlencoded({ extended: false }))
 app.use(fileUpload())
 app.use(express.static('public'))
 
+
 /**
  * Hashes a password string using SHA256
  * @param {string} password - The plain text password
@@ -84,14 +85,19 @@ function clearSession(res) {
  * @returns {Promise<void>}
  */
 async function securityLogMiddleware(req, res, next) {
-    const session = getSession(req)
-    const username = session ? session.username : 'unauthenticated'
-    await persistence.insertSecurityLog({
-        timestamp: new Date(),
-        username: username,
-        url: req.url,
-        method: req.method
-    })
+    // console.log('running') tryign to debug y this isnt wokring
+    try {
+        const session = getSession(req)
+        const username = session ? session.username : 'unauthenticated'
+        await persistence.insertSecurityLog({
+            timestamp: new Date(),
+            username: username,
+            url: req.url,
+            method: req.method
+        })
+    } catch (error) {
+        console.log('Security log error:', error.message)
+    }
     next()
 }
 
@@ -113,6 +119,7 @@ function authMiddleware(req, res, next) {
     next()
 }
 
+console.log('Registering security log middleware')
 app.use(securityLogMiddleware)
 
 /**
