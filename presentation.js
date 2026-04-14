@@ -1,5 +1,6 @@
 const express = require("express")
 const handlebars = require("express-handlebars")
+const fileUpload = require("express-fileupload")
 const path = require("path")
 const fs = require("fs")
 const persistence = require("./persistence")
@@ -13,21 +14,20 @@ app.set("view engine", "hbs")
 app.set("views", "./views")
 
 app.use(express.urlencoded({ extended: false }))
+app.use(fileUpload())
 
-//  Constants 
 
-const SESSION_DURATION     = 5 * 60 * 1000   // 5 minutes
-const TFA_DURATION         = 3 * 60 * 1000   // 3 minutes
-const SUSPICIOUS_THRESHOLD = 3
-const LOCK_THRESHOLD       = 10
-const MAX_FILE_SIZE        = 2 * 1024 * 1024  // 2 MB
+const SESSION_DURATION      = 5 * 60 * 1000   // 5 minutes
+const TFA_DURATION          = 3 * 60 * 1000   // 3 minutes
+const SUSPICIOUS_THRESHOLD  = 3
+const LOCK_THRESHOLD        = 10
+const MAX_FILE_SIZE         = 2 * 1024 * 1024  // 2 MB
 const MAX_DOCS_PER_EMPLOYEE = 5
-const UPLOADS_DIR          = path.join(__dirname, "uploads")
+const UPLOADS_DIR           = path.join(__dirname, "uploads")
 
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR)
 }
-
 
 /**
  * Parses cookies from the request header into a key-value object.
@@ -50,76 +50,11 @@ function parseCookies(req) {
     }
     return cookies
 }
-
-
-/**
- * Manually parses a multipart/form-data request to extract a single file upload.
- * @param {Object} req - Express request object
- * @returns {Promise<Object|null>} Object with originalName, data, mimetype, size — or null
- */
-function parseFileUpload(req) {
-    return new Promise(function (resolve, reject) {
-        const chunks = []
-        req.on("data", function (chunk) { chunks.push(chunk) })
-        req.on("end", function () {
-            const body = Buffer.concat(chunks)
-            const contentType = req.headers["content-type"] || ""
-            const boundaryMatch = contentType.match(/boundary=(.+)$/)
-            if (!boundaryMatch) { resolve(null); return }
-
-            const boundary = "--" + boundaryMatch[1]
-            const boundaryBuf = Buffer.from(boundary)
-            const parts = []
-            let start = 0
-
-            for (let i = 0; i <= body.length - boundaryBuf.length; i++) {
-                let match = true
-                for (let j = 0; j < boundaryBuf.length; j++) {
-                    if (body[i + j] !== boundaryBuf[j]) { match = false; break }
-                }
-                if (match) {
-                    if (start > 0) parts.push(body.slice(start, i - 2))
-                    start = i + boundaryBuf.length + 2
-                }
-            }
-
-            for (let p = 0; p < parts.length; p++) {
-                const part = parts[p]
-                let sepIndex = -1
-                for (let i = 0; i < part.length - 3; i++) {
-                    if (part[i] === 13 && part[i+1] === 10 && part[i+2] === 13 && part[i+3] === 10) {
-                        sepIndex = i; break
-                    }
-                }
-                if (sepIndex === -1) continue
-
-                const headerStr = part.slice(0, sepIndex).toString()
-                const fileData  = part.slice(sepIndex + 4)
-
-                const nameMatch     = headerStr.match(/name="([^"]+)"/)
-                const filenameMatch = headerStr.match(/filename="([^"]+)"/)
-                const mimeMatch     = headerStr.match(/Content-Type:\s*(.+)/)
-
-                if (filenameMatch && nameMatch && nameMatch[1] === "document") {
-                    resolve({
-                        originalName: filenameMatch[1],
-                        data: fileData,
-                        mimetype: mimeMatch ? mimeMatch[1].trim() : "application/octet-stream",
-                        size: fileData.length
-                    })
-                    return
-                }
-            }
-            resolve(null)
-        })
-        req.on("error", reject)
-    })
-}
-
-
+ 
 
 /**
  * Logs every request to the security_log collection.
+ * Identifies the current user from the session cookie if present.
  */
 app.use(async function (req, res, next) {
     try {
@@ -161,9 +96,9 @@ async function requireAuth(req, res, next) {
 }
 
 
-
 /**
- * GET /login - Renders the login form with an optional message.
+ * GET /login
+ * Renders the login form with an optional message.
  */
 app.get("/login", function (req, res) {
     const message = req.query.message || ""
@@ -171,7 +106,9 @@ app.get("/login", function (req, res) {
 })
 
 /**
- * POST /login - Validates credentials. On success sends a 2FA code.
+ * POST /login
+ * Validates credentials. On success resets failed attempts and sends 2FA code.
+ * Handles suspicious activity warnings and account locking.
  */
 app.post("/login", async function (req, res) {
     const username = req.body.username.trim()
@@ -219,7 +156,9 @@ app.post("/login", async function (req, res) {
 })
 
 /**
- * GET /2fa - Renders the 2FA code entry page.
+ * GET /2fa
+ * Renders the 2FA code entry page.
+ * Redirects to /login if no pending user cookie is found.
  */
 app.get("/2fa", function (req, res) {
     const cookies = parseCookies(req)
@@ -232,7 +171,8 @@ app.get("/2fa", function (req, res) {
 })
 
 /**
- * POST /2fa - Validates the 2FA code. On success creates a session.
+ * POST /2fa
+ * Validates the entered 2FA code. On success creates a session and logs the user in.
  */
 app.post("/2fa", async function (req, res) {
     const cookies  = parseCookies(req)
@@ -265,7 +205,8 @@ app.post("/2fa", async function (req, res) {
 })
 
 /**
- * GET /logout - Deletes the session and redirects to /login.
+ * GET /logout
+ * Deletes the session from the database, clears the cookie, redirects to /login.
  */
 app.get("/logout", async function (req, res) {
     const cookies   = parseCookies(req)
@@ -280,7 +221,8 @@ app.get("/logout", async function (req, res) {
 //Protected Routes 
 
 /**
- * GET / - Lists all employees.
+ * GET /
+ * Landing page — lists all employees.
  */
 app.get("/", requireAuth, async function (req, res) {
     const employees = await persistence.getAllEmployees()
@@ -288,7 +230,8 @@ app.get("/", requireAuth, async function (req, res) {
 })
 
 /**
- * GET /employee/:id - Shows employee details, shifts, and documents.
+ * GET /employee/:id
+ * Shows employee details, their shifts, and uploaded documents.
  */
 app.get("/employee/:id", requireAuth, async function (req, res) {
     const id       = req.params.id
@@ -309,7 +252,8 @@ app.get("/employee/:id", requireAuth, async function (req, res) {
 })
 
 /**
- * GET /edit/:id - Shows the edit form pre-filled with employee data.
+ * GET /edit/:id
+ * Shows the edit form pre-filled with the employee's current details.
  */
 app.get("/edit/:id", requireAuth, async function (req, res) {
     const employee = await persistence.getEmployeeById(req.params.id)
@@ -321,7 +265,8 @@ app.get("/edit/:id", requireAuth, async function (req, res) {
 })
 
 /**
- * POST /edit/:id - Validates and saves updated employee name and phone.
+ * POST /edit/:id
+ * Validates and saves updated employee name and phone.
  */
 app.post("/edit/:id", requireAuth, async function (req, res) {
     const id    = req.params.id
@@ -342,7 +287,9 @@ app.post("/edit/:id", requireAuth, async function (req, res) {
 })
 
 /**
- * POST /employee/:id/upload - Handles PDF document upload for an employee.
+ * POST /employee/:id/upload
+ * Handles PDF document upload for an employee.
+ * Enforces PDF-only, 2 MB limit, and 5 document maximum.
  */
 app.post("/employee/:id/upload", requireAuth, async function (req, res) {
     const id       = req.params.id
@@ -359,7 +306,7 @@ app.post("/employee/:id/upload", requireAuth, async function (req, res) {
         return
     }
 
-    const file = await parseFileUpload(req)
+    const file = req.files ? req.files.document : null
 
     if (!file) {
         res.send("No file uploaded")
@@ -374,16 +321,18 @@ app.post("/employee/:id/upload", requireAuth, async function (req, res) {
         return
     }
 
-    const uniqueName = Date.now() + "_" + file.originalName.replace(/[^a-zA-Z0-9._-]/g, "_")
+    const uniqueName = Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
     const filePath   = path.join(UPLOADS_DIR, uniqueName)
-    fs.writeFileSync(filePath, file.data)
+    await file.mv(filePath)
 
-    await persistence.saveDocumentRecord(id, uniqueName, file.originalName)
+    await persistence.saveDocumentRecord(id, uniqueName, file.name)
     res.redirect("/employee/" + id)
 })
 
 /**
- * GET /document/:docId - Serves a protected employee PDF (auth required).
+ * GET /document/:docId
+ * Serves a protected employee PDF — only accessible to logged-in users.
+ * Files are not on a public static route.
  */
 app.get("/document/:docId", requireAuth, async function (req, res) {
     const doc = await persistence.getDocumentById(req.params.docId)
@@ -405,14 +354,12 @@ app.get("/document/:docId", requireAuth, async function (req, res) {
     res.send(fileData)
 })
 
-
-
 /**
- * Starts the Express server on port 8000.
+ * Starts the Express server on port 8001
  */
 function startServer() {
     app.listen(8001, function () {
-        console.log("Server running at http://127.0.0.1:8000")
+        console.log("Server running at http://127.0.0.1:8001")
     })
 }
 
