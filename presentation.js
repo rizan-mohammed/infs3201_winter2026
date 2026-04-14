@@ -226,7 +226,7 @@ app.get("/logout", async function (req, res) {
  */
 app.get("/", requireAuth, async function (req, res) {
     const employees = await persistence.getAllEmployees()
-    res.render("employeeList", { employees: employees })
+    res.render("index", { employees: employees })
 })
 
 /**
@@ -248,7 +248,7 @@ app.get("/employee/:id", requireAuth, async function (req, res) {
     }
 
     const docs = await persistence.getDocumentsForEmployee(id)
-    res.render("employeeDetails", { employee: employee, shifts: shifts, documents: docs })
+    res.render("employee-details", { employee: employee, shifts: shifts, documents: docs })
 })
 
 /**
