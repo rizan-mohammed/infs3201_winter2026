@@ -1,98 +1,93 @@
-const persistence = require('./persistance')
+const crypto = require("crypto")
+
+
 
 /**
- * Gets all employees from the system
- * @returns {Promise<Array>} Array of all employee objects
+ * Validates that a phone number matches the format: 4 digits, dash, 4 digits
+ * @param {string} phoneNumber - The phone number to validate
+ * @returns {boolean} True if valid, false otherwise
  */
-async function getAllEmployees() {
-    return await persistence.loadEmployees()
-}
-
-/**
- * Adds a new employee to the system
- * @param {string} name - Employee name
- * @param {string} phone - Employee phone number
- * @param {string|null} photo - Photo filename or null if no photo uploaded
- * @returns {Promise<Object>} Object containing success status and the new employee or error message
- */
-async function addEmployee(name, phone, photo) {
-    try {
-        const newEmployee = { name: name, phone: phone }
-        if (photo) {
-            newEmployee.photo = photo
-        }
-        await persistence.insertEmployee(newEmployee)
-        return { success: true, employee: newEmployee }
-    } catch (error) {
-        return { success: false, error: error.message }
+function isValidPhone(phoneNumber) {
+    if (phoneNumber.length !== 9) {
+        return false
     }
-}
-
-/**
- * Updates an existing employee's details after validating inputs
- * @param {string} id - The employee ObjectId string
- * @param {string} name - The new name (will be trimmed)
- * @param {string} phone - The new phone number (will be trimmed)
- * @param {string|null} photo - New photo filename or null if no new photo uploaded
- * @returns {Promise<Object>} Object containing success status and errors array if validation failed
- */
-async function updateEmployee(id, name, phone, photo) {
-    const trimmedName = name.trim()
-    const trimmedPhone = phone.trim()
-    const errors = []
-
-    if (trimmedName === '') {
-        errors.push('Name must not be empty.')
-    }
-
-    const phoneRegex = /^\d{4}-\d{4}$/
-    if (!phoneRegex.test(trimmedPhone)) {
-        errors.push('Phone number must be in the format ####-#### (4 digits, dash, 4 digits).')
-    }
-
-    if (errors.length > 0) {
-        return { success: false, errors: errors }
-    }
-
-    try {
-        await persistence.updateEmployeeById(id, trimmedName, trimmedPhone, photo)
-        return { success: true }
-    } catch (error) {
-        return { success: false, errors: [error.message] }
-    }
-}
-
-/**
- * Gets the schedule for a specific employee sorted by date and start time
- * @param {string} id - The employee ObjectId string
- * @returns {Promise<Object>} Object containing employee existence status and sorted shifts array
- */
-async function getEmployeeSchedule(id) {
-    const employee = await persistence.findEmployeeById(id)
-    if (!employee) {
-        return { exists: false, shifts: [] }
-    }
-
-    const shifts = await persistence.findShiftsByEmployee(id)
-
-    for (let i = 0; i < shifts.length - 1; i++) {
-        for (let j = 0; j < shifts.length - i - 1; j++) {
-            const current = shifts[j].date + shifts[j].startTime
-            const next = shifts[j + 1].date + shifts[j + 1].startTime
-            if (current > next) {
-                const temp = shifts[j]
-                shifts[j] = shifts[j + 1]
-                shifts[j + 1] = temp
-            }
+    for (let i = 0; i < 4; i += 1) {
+        const charCode = phoneNumber.charCodeAt(i)
+        if (charCode < 48 || charCode > 57) {
+            return false
         }
     }
+    if (phoneNumber.charAt(4) !== "-") {
+        return false
+    }
+    for (let i = 5; i < 9; i += 1) {
+        const charCode = phoneNumber.charCodeAt(i)
+        if (charCode < 48 || charCode > 57) {
+            return false
+        }
+    }
+    return true
+}
 
-    return { exists: true, shifts: shifts }
+
+
+/**
+ * Checks if a shift start time is before noon (12:00)
+ * @param {string} startTime - The start time in HH:MM format
+ * @returns {boolean} True if before noon, false otherwise
+ */
+function isBeforeNoon(startTime) {
+    const parts = startTime.split(":")
+    const hour = parseInt(parts[0], 10)
+    return hour < 12
+}
+
+/**
+ * Calculates the duration of a shift in hours.
+ * @param {string} startTime - Start time in HH:MM format
+ * @param {string} endTime - End time in HH:MM format
+ * @returns {number} Duration as a decimal number (e.g. 2.5 for 2h 30m)
+ */
+function computeShiftDuration(startTime, endTime) {
+    const startParts = startTime.split(":")
+    const endParts = endTime.split(":")
+    const startInHours = Number(startParts[0]) + Number(startParts[1]) / 60
+    const endInHours = Number(endParts[0]) + Number(endParts[1]) / 60
+    return endInHours - startInHours
+}
+
+
+/**
+ * Hashes a password using SHA-256
+ * @param {string} plainTextPassword - The plain text password
+ * @returns {string} The hex encoded SHA-256 hash
+ */
+function hashPassword(plainTextPassword) {
+    return crypto.createHash("sha256").update(plainTextPassword).digest("hex")
+}
+
+/**
+ * Generates a cryptographically secure random session ID
+ * @returns {string} A random 64-character hex string
+ */
+function generateSessionId() {
+    return crypto.randomBytes(32).toString("hex")
+}
+
+/**
+ * Generates a cryptographically secure random 6-digit 2FA code
+ * @returns {string} A zero-padded 6-digit numeric string
+ */
+function generate2FACode() {
+    const code = crypto.randomInt(0, 1000000)
+    return String(code).padStart(6, "0")
 }
 
 module.exports = {
-    getAllEmployees,
-    addEmployee,
-    updateEmployee,
-    getEmployeeSchedule
+    isValidPhone,
+    isBeforeNoon,
+    computeShiftDuration,
+    hashPassword,
+    generateSessionId,
+    generate2FACode
 }
