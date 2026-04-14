@@ -1,15 +1,17 @@
 {
-  "name": "assignment3",
+  "name": "infs3201_winter2026",
+  "type": "commonjs",
   "version": "1.0.0",
-  "description": "Employee Scheduling System - Assignment 3",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node index.js"
   },
+  "author": "",
+  "license": "ISC",
+  "description": "Employee Scheduling System",
   "dependencies": {
-    "express": "^4.18.2",
-    "express-fileupload": "^1.5.2",
-    "express-handlebars": "^7.1.2",
-    "mongodb": "^6.3.0"
+    "express": "^5.2.1",
+    "express-handlebars": "^7.1.3",
+    "mongodb": "^6.21.0"
   }
 }
