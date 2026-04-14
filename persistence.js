@@ -8,7 +8,7 @@ let client = undefined
  */
 async function getClient() {
     if (!client) {
-        client = new mongodb.MongoClient("mongodb+srv://60306369_db_user:<Bing%213344>@infs3201-winter2026.3e2mbls.mongodb.net/?appName=infs3201-winter2026")
+        client = new mongodb.MongoClient("mongodb+srv://60306369_db_user:Bing%213344@infs3201-winter2026.3e2mbls.mongodb.net/?appName=infs3201-winter2026")
         await client.connect()
         console.log("Connected to MongoDB")
     }
