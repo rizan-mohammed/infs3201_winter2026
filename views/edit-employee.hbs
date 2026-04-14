@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Edit {{employee.name}}</title>
+    <style>
+        body   { font-family: sans-serif; max-width: 400px; margin: 40px auto; }
+        label  { display: block; margin-top: 12px; }
+        input  { width: 100%; padding: 6px; margin-top: 4px; box-sizing: border-box; }
+        button { margin-top: 16px; padding: 8px 20px; }
+        a      { display: block; margin-top: 12px; color: #0066cc; }
+    </style>
 </head>
 <body>
-    <h1>Edit Employee</h1>
-
-    {{#if employee.photo}}
-        <img src="/uploads/{{employee.photo}}" alt="{{employee.name}}" width="150"><br><br>
-    {{/if}}
-
-    <form action="/employee/{{employee._id}}/edit" method="POST" enctype="multipart/form-data">
-        <label for="name">Name</label><br>
-        <input type="text" id="name" name="name" value="{{employee.name}}"><br><br>
-
-        <label for="phone">Phone (####-####)</label><br>
-        <input type="text" id="phone" name="phone" value="{{employee.phone}}"><br><br>
-
-        <label for="photo">Photo (leave blank to keep existing)</label><br>
-        <input type="file" id="photo" name="photo" accept="image/*"><br><br>
-
-        <button type="submit">Save Changes</button>
+    <h2>Edit Employee</h2>
+    <form method="POST" action="/edit/{{employee._id}}">
+        <label>Name
+            <input type="text" name="name" value="{{employee.name}}" required>
+        </label>
+        <label>Phone (format: 1234-5678)
+            <input type="text" name="phone" value="{{employee.phone}}" required>
+        </label>
+        <button type="submit">Save</button>
     </form>
-    <a href="/employee/{{employee._id}}">Cancel</a>
+    <a href="/">← Cancel</a>
 </body>
 </html>

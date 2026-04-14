@@ -2,41 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{employee.name}} - Details</title>
+    <title>{{employee.name}}</title>
     <style>
-        .morning { background-color: yellow; }
+        body  { font-family: sans-serif; max-width: 700px; margin: 40px auto; }
+        table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+        th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+        th    { background: #f0f0f0; }
+        .morning { background: #fffbcc; }
+        a     { color: #0066cc; }
+        .back { margin-top: 20px; display: block; }
     </style>
 </head>
 <body>
-    <h1>{{employee.name}}</h1>
-
-    {{#if employee.photo}}
-        <img src="/uploads/{{employee.photo}}" alt="{{employee.name}}" width="150"><br><br>
-    {{/if}}
-
+    <h2>{{employee.name}}</h2>
     <p><strong>Phone:</strong> {{employee.phone}}</p>
-    <a href="/employee/{{employee._id}}/edit">Edit Details</a>
+    <p><a href="/edit/{{employee._id}}">Edit Details</a></p>
 
-    <h2>Shifts</h2>
+    <h3>Shifts</h3>
     {{#if shifts.length}}
-        <table border="1">
-            <thead>
-                <tr><th>Date</th><th>Start Time</th><th>End Time</th></tr>
-            </thead>
-            <tbody>
-                {{#each shifts}}
-                    <tr>
-                        <td>{{this.date}}</td>
-                        <td {{#if this.isMorning}}class="morning"{{/if}}>{{this.startTime}}</td>
-                        <td>{{this.endTime}}</td>
-                    </tr>
-                {{/each}}
-            </tbody>
-        </table>
+    <table>
+        <thead>
+            <tr><th>Date</th><th>Start</th><th>End</th></tr>
+        </thead>
+        <tbody>
+            {{#each shifts}}
+            <tr {{#if isMorning}}class="morning"{{/if}}>
+                <td>{{date}}</td>
+                <td>{{startTime}}</td>
+                <td>{{endTime}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
     {{else}}
-        <p>No shifts assigned.</p>
+    <p>No shifts assigned.</p>
     {{/if}}
 
-    <a href="/">Back to Employee List</a>
+    <h2>Documents</h2>
+    {{#if documents.length}}
+    <ul>
+        {{#each documents}}
+        <li><a href="/document/{{_id}}">{{originalName}}</a></li>
+        {{/each}}
+    </ul>
+    {{else}}
+    <p>No documents uploaded yet.</p>
+    {{/if}}
+
+    <h3>Upload Document (PDF only, max 2MB)</h3>
+    <form method="POST" action="/employee/{{employee._id}}/upload" enctype="multipart/form-data">
+        <input type="file" name="document" accept="application/pdf">
+        <button type="submit">Upload</button>
+    </form>
+
+    <a class="back" href="/">← Back to Employee List</a>
 </body>
 </html>

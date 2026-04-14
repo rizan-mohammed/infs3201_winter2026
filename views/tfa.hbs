@@ -1,0 +1,13 @@
+<h1>Two-Factor Authentication</h1>
+<p>A 6-digit verification code has been sent to your email. Please enter it below.</p>
+{{#if message}}
+<p style="color: red;">{{message}}</p>
+{{/if}}
+<form method="POST" action="/2fa">
+    <p>
+        <label>Verification Code:</label><br>
+        <input type="text" name="code" maxlength="6" autocomplete="off">
+    </p>
+    <button type="submit">Verify</button>
+</form>
+<p><a href="/login">Back to Login</a></p>
